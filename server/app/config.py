@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     handover_ttl_hours: int = 48        # how long a handover code stays valid
     handover_max_attempts: int = 5      # wrong guesses before the code is locked
     flag_auto_hide_threshold: int = 3   # open flags before a report is auto-hidden
-    max_evidence_bytes: int = 5 * 1024 * 1024
+    max_evidence_bytes: int = 4 * 1024 * 1024
 
     class Config:
         env_file = ".env"

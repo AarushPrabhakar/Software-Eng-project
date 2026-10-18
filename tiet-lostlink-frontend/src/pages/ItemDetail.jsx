@@ -60,7 +60,7 @@ function ClaimForm({ code, onDone }) {
             onChange={(e) => setAnswers(e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="evidence">Proof photo <span className="hint">(optional, JPG, PNG or WebP up to 5 MB, stored privately)</span></label>
+          <label htmlFor="evidence">Proof photo <span className="hint">(optional, JPG, PNG or WebP up to 4 MB, stored privately)</span></label>
           <input id="evidence" type="file" accept="image/jpeg,image/png,image/webp"
             onChange={(e) => setFile(e.target.files?.[0] || null)} />
         </div>

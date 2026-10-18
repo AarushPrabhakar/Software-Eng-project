@@ -270,7 +270,7 @@ async def upload_evidence(
 
     data = await file.read(settings.max_evidence_bytes + 1)
     if len(data) > settings.max_evidence_bytes:
-        raise HTTPException(status_code=413, detail="Evidence image must be 5 MB or smaller.")
+        raise HTTPException(status_code=413, detail="Evidence image must be 4 MB or smaller.")
     real_type = _sniff_image(data)
     if real_type != file.content_type:
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="File contents don't match an allowed image type.")
