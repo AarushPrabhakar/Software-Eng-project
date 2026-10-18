@@ -1,6 +1,7 @@
 import { useNavigate, Link } from 'react-router-dom'
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
+import AuthShell from '../components/AuthShell.jsx'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -30,53 +31,32 @@ export default function Login() {
   }
 
   return (
-    <div className="page page--narrow">
-      <div className="login-card">
-        <p className="eyebrow">TIET LostLink</p>
-        <h1 className="title">Report it. Search it. Get it back.</h1>
-        <p className="lede">
-          Log in with your institute email to report a lost or found item, search active
-          reports, and track claims.
-        </p>
-
-        <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
-          <div className="field">
-            <label htmlFor="email">Institutional email</label>
-            <input
-              id="email"
-              className="input"
-              type="email"
-              placeholder="yourname@thapar.edu"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="field" style={{ marginTop: 14 }}>
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          {error && (
-            <p style={{ color: 'var(--lost)', fontSize: 13, marginTop: 10 }}>{error}</p>
-          )}
-          <button type="submit" className="btn btn--primary btn--block" style={{ marginTop: 18 }} disabled={loading}>
-            {loading ? 'Signing in…' : 'Continue'}
-          </button>
-        </form>
-        <p className="divider-note">
-          Only verified TIET students can report or claim items. New here?{' '}
-          <Link to="/register" style={{ color: 'inherit', textDecoration: 'underline' }}>
-            Create an account
-          </Link>
-        </p>
-      </div>
-    </div>
+    <AuthShell
+      title="Welcome back"
+      lede="Sign in with your institute email to report items, check matches and track claims."
+      footer={
+        <>
+          New here?{' '}
+          <Link to="/register" style={{ color: 'var(--brand)', fontWeight: 600 }}>Create an account</Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="stack">
+        <div className="field">
+          <label htmlFor="email">Institutional email</label>
+          <input id="email" className="input" type="email" placeholder="yourname@thapar.edu"
+            autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </div>
+        <div className="field">
+          <label htmlFor="password">Password</label>
+          <input id="password" className="input" type="password" autoComplete="current-password"
+            value={password} onChange={(e) => setPassword(e.target.value)} required />
+        </div>
+        {error && <p className="msg msg--error" role="alert">{error}</p>}
+        <button type="submit" className="btn btn--primary btn--block btn--lg" disabled={loading}>
+          {loading ? 'Signing in…' : 'Sign in'}
+        </button>
+      </form>
+    </AuthShell>
   )
 }

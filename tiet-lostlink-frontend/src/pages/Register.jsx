@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import AuthShell from '../components/AuthShell.jsx'
 
 export default function Register() {
   const navigate = useNavigate()
@@ -82,79 +83,44 @@ export default function Register() {
   }
 
   return (
-    <div className="page page--narrow">
-      <div className="login-card">
-        <p className="eyebrow">TIET LostLink</p>
-        <h1 className="title">Create your account</h1>
-        <p className="lede">
-          Use your institutional email — it's how we confirm you're part of the TIET campus
-          community.
-        </p>
-
-        <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
-          <div className="field">
-            <label htmlFor="name">Full name</label>
-            <input
-              id="name"
-              className="input"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="field" style={{ marginTop: 14 }}>
-            <label htmlFor="email">Institutional email</label>
-            <input
-              id="email"
-              className="input"
-              type="email"
-              placeholder="yourname@thapar.edu"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="field" style={{ marginTop: 14 }}>
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <div className="field" style={{ marginTop: 14 }}>
-            <label htmlFor="confirmPassword">Confirm password</label>
-            <input
-              id="confirmPassword"
-              className="input"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-            />
-          </div>
-          {error && <p style={{ color: 'var(--lost)', fontSize: 13, marginTop: 10 }}>{error}</p>}
-          {success && <p style={{ color: 'var(--found)', fontSize: 13, marginTop: 10 }}>{success}</p>}
-          <button
-            type="submit"
-            className="btn btn--primary btn--block"
-            style={{ marginTop: 18 }}
-            disabled={loading}
-          >
-            {loading ? 'Creating account…' : 'Create account'}
-          </button>
-        </form>
-        <p className="divider-note">
+    <AuthShell
+      title="Create your account"
+      lede="Use your institutional email. It's how we know you're part of the campus community."
+      footer={
+        <>
           Already have an account?{' '}
-          <Link to="/login" style={{ color: 'inherit', textDecoration: 'underline' }}>
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </div>
+          <Link to="/login" style={{ color: 'var(--brand)', fontWeight: 600 }}>Sign in</Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="stack">
+        <div className="field">
+          <label htmlFor="name">Full name</label>
+          <input id="name" className="input" type="text" autoComplete="name" value={name}
+            onChange={(e) => setName(e.target.value)} required />
+        </div>
+        <div className="field">
+          <label htmlFor="email">Institutional email</label>
+          <input id="email" className="input" type="email" placeholder="yourname@thapar.edu"
+            autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </div>
+        <div className="field">
+          <label htmlFor="password">Password</label>
+          <input id="password" className="input" type="password" autoComplete="new-password"
+            value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <span className="hint">At least 8 characters.</span>
+        </div>
+        <div className="field">
+          <label htmlFor="confirmPassword">Confirm password</label>
+          <input id="confirmPassword" className="input" type="password" autoComplete="new-password"
+            value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+        </div>
+        {error && <p className="msg msg--error" role="alert">{error}</p>}
+        {success && <p className="msg msg--ok" role="status">{success}</p>}
+        <button type="submit" className="btn btn--primary btn--block btn--lg" disabled={loading}>
+          {loading ? 'Creating account…' : 'Create account'}
+        </button>
+      </form>
+    </AuthShell>
   )
 }

@@ -46,40 +46,15 @@ export function toViewItem(report) {
     status: report.status,
     category: CATEGORY_LABEL[report.category] || report.category,
     title: report.title,
-    description: report.public_description,
+    description: report.public_description || '',
     brand: report.brand || '—',
     colour: report.colour || '—',
     location: report.campus_location || '—',
-    date: report.event_date,
+    date: report.event_date || null,
     imageUrl: report.image_url || null,
+    // found items are shown as "title only" until your own lost report matches them
+    redacted: !!report.redacted,
+    access: report.access || 'public',
+    matchScore: report.match_score || null,
   }
-}
-
-// Rough client-side stand-in for the weighted match algorithm in the
-// proposal (category 30 / brand 15 / colour 15 / location 15 / date 15 / description 10)
-export function scoreMatch(a, b) {
-  let score = 0
-  if (a.category === b.category) score += 30
-  if (a.brand !== '—' && a.brand === b.brand) score += 15
-  if (a.colour === b.colour) score += 15
-  if (a.location === b.location) score += 15
-  const days = Math.abs(new Date(a.date) - new Date(b.date)) / 86400000
-  if (days <= 3) score += 15
-  const wordsA = new Set(a.description.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/))
-  const wordsB = new Set(b.description.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/))
-  const shared = [...wordsA].filter((w) => wordsB.has(w) && w.length > 3)
-  score += Math.min(10, shared.length * 3)
-  return score
-}
-
-/**
- * Finds and ranks possible matches for `item` against `allItems`
- * (both already converted via toViewItem). Used on the item detail page.
- */
-export function findMatches(item, allItems) {
-  const oppositeType = item.type === 'lost' ? 'found' : 'lost'
-  return allItems
-    .filter((i) => i.type === oppositeType && i.category === item.category && i.id !== item.id)
-    .map((i) => ({ item: i, score: scoreMatch(item, i) }))
-    .sort((a, b) => b.score - a.score)
 }

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Search, SearchX, Plus } from 'lucide-react'
 import TagCard from '../components/TagCard.jsx'
-import api from '../api.js'
+import EmptyState from '../components/EmptyState.jsx'
+import { CardSkeletons } from '../components/Skeletons.jsx'
+import api, { errMsg } from '../api.js'
 import { CATEGORIES, LOCATIONS, toViewItem } from '../data/mockItems.js'
 
 export default function Feed() {
@@ -27,7 +30,7 @@ export default function Feed() {
       })
       .catch((err) => {
         if (cancelled) return
-        setLoadError(err.response?.data?.error || 'Failed to load reports.')
+        setLoadError(errMsg(err, 'Failed to load reports.'))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -52,59 +55,56 @@ export default function Feed() {
     })
   }, [items, query, type, category, location])
 
+  const couldBeYours = items.filter((i) => i.access === 'matched').length
+  const filtersOn = query || type !== 'all' || category !== 'all' || location !== 'all'
+
   return (
     <div className="page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
+      <div className="page-head">
         <div>
-          <p className="eyebrow">Active reports · {items.filter((i) => i.status === 'active').length} open</p>
-          <h1 className="title">Campus report feed</h1>
+          <h1>Campus feed</h1>
+          <p>
+            Lost items are public. Found items show only their type until one of your lost reports matches.
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <Link to="/report/lost" className="btn btn--lost">
-            I lost something
-          </Link>
-          <Link to="/report/found" className="btn btn--found">
-            I found something
-          </Link>
+        <div className="page-head__actions">
+          <Link to="/report/lost" className="btn btn--lost"><Plus size={18} />I lost something</Link>
+          <Link to="/report/found" className="btn btn--found"><Plus size={18} />I found something</Link>
         </div>
       </div>
 
-      <div className="filter-bar">
-        <div className="field search-input">
+      {couldBeYours > 0 && (
+        <p className="msg msg--info" role="status" style={{ marginTop: 0, marginBottom: 20 }}>
+          {couldBeYours === 1 ? 'A found item' : `${couldBeYours} found items`} matched your lost reports. Look for the yellow tag.
+        </p>
+      )}
+
+      <div className="filters">
+        <div className="field">
           <label htmlFor="search">Search</label>
-          <input
-            id="search"
-            className="input"
-            placeholder="Brand, colour, keyword…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <div className="input-icon">
+            <Search size={18} />
+            <input id="search" className="input" placeholder="Brand, colour, keyword" value={query}
+              onChange={(e) => setQuery(e.target.value)} />
+          </div>
         </div>
         <div className="field">
           <label htmlFor="category">Category</label>
           <select id="category" className="select" value={category} onChange={(e) => setCategory(e.target.value)}>
             <option value="all">All categories</option>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
+            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div className="field">
           <label htmlFor="location">Location</label>
           <select id="location" className="select" value={location} onChange={(e) => setLocation(e.target.value)}>
             <option value="all">All locations</option>
-            {LOCATIONS.map((l) => (
-              <option key={l} value={l}>
-                {l}
-              </option>
-            ))}
+            {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
         </div>
-        <div className="chip-row" style={{ alignSelf: 'flex-end', marginBottom: 1 }}>
+        <div className="segmented" role="group" aria-label="Report type">
           {['all', 'lost', 'found'].map((t) => (
-            <button key={t} className={`chip${type === t ? ' is-active' : ''}`} onClick={() => setType(t)}>
+            <button key={t} className={type === t ? 'is-active' : ''} onClick={() => setType(t)}>
               {t === 'all' ? 'All' : t[0].toUpperCase() + t.slice(1)}
             </button>
           ))}
@@ -112,20 +112,34 @@ export default function Feed() {
       </div>
 
       {loading ? (
-        <div className="empty-state">Loading reports…</div>
+        <CardSkeletons />
       ) : loadError ? (
-        <div className="empty-state">{loadError}</div>
+        <EmptyState icon={SearchX} title="Couldn't load the feed">
+          {loadError}
+        </EmptyState>
       ) : filtered.length === 0 ? (
-        <div className="empty-state">
-          <p className="section-label" style={{ marginTop: 0 }}>No reports match those filters</p>
-          <p>Try clearing a filter, or be the first to report this item.</p>
-        </div>
+        <EmptyState
+          icon={SearchX}
+          title={filtersOn ? 'Nothing matches those filters' : 'No reports yet'}
+          action={
+            filtersOn ? (
+              <button className="btn btn--ghost" onClick={() => { setQuery(''); setType('all'); setCategory('all'); setLocation('all') }}>
+                Clear filters
+              </button>
+            ) : (
+              <Link to="/report/lost" className="btn btn--primary">Report the first item</Link>
+            )
+          }
+        >
+          {filtersOn ? 'Try removing a filter, or report the item yourself.' : 'Be the first to report something lost or found on campus.'}
+        </EmptyState>
       ) : (
-        <div className="tag-grid">
-          {filtered.map((item) => (
-            <TagCard key={item.id} item={item} />
-          ))}
-        </div>
+        <>
+          <p className="result-count">{filtered.length} {filtered.length === 1 ? 'report' : 'reports'}</p>
+          <div className="ticket-grid">
+            {filtered.map((item) => <TagCard key={item.id} item={item} />)}
+          </div>
+        </>
       )}
     </div>
   )

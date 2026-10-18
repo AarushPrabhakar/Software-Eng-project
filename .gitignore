@@ -70,3 +70,8 @@ Thumbs.db
 
 # Miscellaneous
 *.local
+
+# Python
+venv/
+__pycache__/
+.pytest_cache/

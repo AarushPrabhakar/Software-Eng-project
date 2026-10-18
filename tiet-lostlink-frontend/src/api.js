@@ -15,3 +15,11 @@ api.interceptors.request.use(async (config) => {
 })
 
 export default api
+
+// FastAPI returns errors as { detail: "..." } (or a list for validation errors).
+export function errMsg(err, fallback = 'Something went wrong.') {
+  const d = err?.response?.data?.detail
+  if (typeof d === 'string') return d
+  if (Array.isArray(d) && d[0]?.msg) return d[0].msg
+  return err?.message || fallback
+}
