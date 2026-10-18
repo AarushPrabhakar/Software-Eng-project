@@ -19,25 +19,52 @@ def test_similarity_is_share_of_shared_keywords():
 
 def test_perfect_attribute_match_is_high():
     r = score_pair(LOST, FOUND)
-    assert r["breakdown"]["category"] == 30
-    assert r["breakdown"]["brand"] == 15 and r["breakdown"]["colour"] == 15
-    assert r["breakdown"]["location"] == 15 and r["breakdown"]["date"] == 15
-    assert r["score"] >= 75 and r["tier"] == "high"
+    assert r["breakdown"]["category"] == 15
+    assert r["breakdown"]["brand"] == 20 and r["breakdown"]["colour"] == 20
+    assert r["breakdown"]["location"] == 10 and r["breakdown"]["date"] == 10
+    assert r["score"] >= 90 and r["tier"] == "high"
 
 
-def test_date_outside_window_loses_points():
-    far = dict(FOUND, event_date="2026-09-20")
-    assert score_pair(LOST, far)["breakdown"]["date"] == 0
+def test_date_fades_and_expires():
+    near = score_pair(LOST, dict(FOUND, event_date="2026-09-12"))["breakdown"]["date"]
+    far = score_pair(LOST, dict(FOUND, event_date="2026-09-20"))["breakdown"]["date"]
+    gone = score_pair(LOST, dict(FOUND, event_date="2026-10-20"))["breakdown"]["date"]
+    assert near > far > gone == 0
 
 
-def test_missing_brand_does_not_count_as_match():
+def test_found_before_lost_is_penalised():
+    r = score_pair(LOST, dict(FOUND, event_date="2026-09-01"))
+    assert r["breakdown"]["date"] == 0 and r["breakdown"]["penalty"] < 0
+
+
+def test_missing_brand_is_neutral_not_a_match():
     r = score_pair(dict(LOST, brand=None), dict(FOUND, brand=None))
-    assert r["breakdown"]["brand"] == 0
+    assert 0 < r["breakdown"]["brand"] < 20 and r["breakdown"]["penalty"] == 0
+
+
+def test_conflicting_brand_is_penalised():
+    r = score_pair(LOST, dict(FOUND, brand="Cello"))
+    assert r["breakdown"]["brand"] < 5 and r["breakdown"]["penalty"] < 0
+
+
+def test_colour_families_and_synonyms():
+    assert score_pair(LOST, dict(FOUND, colour="Navy"))["breakdown"]["colour"] == 20
+    assert score_pair(LOST, dict(FOUND, colour="Red"))["breakdown"]["colour"] == 0
+    assert description_similarity("steel flask", "steel bottle") == 1.0
+
+
+def test_brand_tolerates_typos():
+    assert score_pair(LOST, dict(FOUND, brand="Miltn"))["breakdown"]["brand"] > 14
+
+
+def test_place_and_date_alone_cannot_unlock():
+    other = dict(FOUND, brand="Cello", colour="Red", title="Thing", public_description="something different entirely")
+    assert score_pair(LOST, other)["score"] < 60
 
 
 def test_tier_thresholds():
     assert tier_for(75) == "high" and tier_for(74) == "possible"
-    assert tier_for(50) == "possible" and tier_for(49) == "weak"
+    assert tier_for(60) == "possible" and tier_for(59) == "weak"
 
 
 def test_mandatory_filters():

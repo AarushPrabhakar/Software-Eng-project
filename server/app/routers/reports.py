@@ -20,7 +20,7 @@ def _public(report: dict) -> dict:
 def _notify_new_matches(report: dict) -> None:
     """
     After a report is created: cache matches, then notify.
-      * the LOST owner is told "an item that could be yours was found" when score >= 50
+      * the LOST owner is told "an item that could be yours was found" when score >= 60
       * the FOUND owner is told someone may be looking for it when score >= 75
     The notification never contains the found item's details, only a generic title.
     """
@@ -172,7 +172,7 @@ async def get_report(ref: str, current_user=Depends(get_current_user)):
 async def get_matches(ref: str, current_user=Depends(get_current_user)):
     """
     Possible matches for a report. Only the report's owner (or an admin) can ask.
-    For a LOST report: matching found items (score >= 50) without private_detail.
+    For a LOST report: matching found items (score >= 60) without private_detail.
     For a FOUND report: only a count of strongly interested owners, never their reports.
     """
     report = get_report_or_404(ref)

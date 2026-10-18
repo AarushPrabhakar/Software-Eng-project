@@ -16,7 +16,7 @@ from typing import Optional
 from app.database import supabase_admin
 from app.matching import POSSIBLE_THRESHOLD, rank_matches
 
-UNLOCK_THRESHOLD = POSSIBLE_THRESHOLD  # 50 = "possible" or better
+UNLOCK_THRESHOLD = POSSIBLE_THRESHOLD  # 60 = "possible" or better
 
 CATEGORY_LABELS = {
     "backpacks_bags": "Backpack or bag",
