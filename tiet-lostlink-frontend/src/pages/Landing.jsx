@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EyeOff, ShieldCheck, KeyRound, Lock } from 'lucide-react'
 import ScoreRing from '../components/ScoreRing.jsx'
+import ThemeToggle from '../components/ThemeToggle.jsx'
 
 // The hero demo: a found item starts blacked out; "Match it" lifts the bars and highlights what fits.
 function Redactable({ children, width }) {
@@ -68,6 +69,7 @@ export default function Landing() {
           LostLink
         </span>
         <div className="land-nav__links">
+          <ThemeToggle />
           <Link to="/login" className="btn btn--ghost btn--sm">Sign in</Link>
           <Link to="/register" className="btn btn--primary btn--sm">Create account</Link>
         </div>
@@ -148,7 +150,7 @@ export default function Landing() {
         <section className="cta-band">
           <div className="cta-band__inner">
             <h2>Lost something on campus this week?</h2>
-            <Link to="/register" className="btn btn--lg" style={{ background: '#fff', color: 'var(--ink)' }}>
+            <Link to="/register" className="btn btn--lg" style={{ background: 'var(--on-solid)', color: 'var(--solid)' }}>
               Report it now
             </Link>
           </div>

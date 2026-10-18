@@ -37,7 +37,7 @@ export default function Login() {
       footer={
         <>
           New here?{' '}
-          <Link to="/register" style={{ color: 'var(--brand)', fontWeight: 600 }}>Create an account</Link>
+          <Link to="/register" style={{ color: 'var(--brand-text)', fontWeight: 600 }}>Create an account</Link>
         </>
       }
     >

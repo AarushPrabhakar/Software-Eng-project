@@ -89,7 +89,7 @@ export default function Register() {
       footer={
         <>
           Already have an account?{' '}
-          <Link to="/login" style={{ color: 'var(--brand)', fontWeight: 600 }}>Sign in</Link>
+          <Link to="/login" style={{ color: 'var(--brand-text)', fontWeight: 600 }}>Sign in</Link>
         </>
       }
     >

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import ThemeToggle from './ThemeToggle.jsx'
 
 export default function AuthShell({ title, lede, children, footer }) {
   return (
@@ -28,6 +29,7 @@ export default function AuthShell({ title, lede, children, footer }) {
       </aside>
 
       <main className="auth__form">
+        <ThemeToggle className="auth__theme" />
         <div className="auth__card">
           <Link to="/" className="brand auth__mobile-brand">
             <span className="brand__mark" />

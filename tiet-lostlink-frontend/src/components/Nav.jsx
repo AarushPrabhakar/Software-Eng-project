@@ -3,6 +3,7 @@ import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { Bell, LogOut, LayoutGrid, Search, PackagePlus, Activity } from 'lucide-react'
 import api from '../api.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import ThemeToggle from './ThemeToggle.jsx'
 
 function initialsOf(name) {
   return name
@@ -73,6 +74,7 @@ export default function Nav() {
             {isAdmin && <NavLink to="/admin" className={link}>Admin</NavLink>}
           </nav>
           <div className="topbar__right">
+            <ThemeToggle />
             <Link to="/notifications" className="iconbtn" aria-label={`Alerts, ${unread} unread`}>
               <Bell size={20} />
               {unread > 0 && <span className="iconbtn__dot">{unread > 9 ? '9+' : unread}</span>}

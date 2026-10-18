@@ -170,7 +170,7 @@ export default function ClaimDetail() {
             <p style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <Mail size={16} />
               Contact {isFinder ? 'the claimant' : 'the finder'}: <strong>{contact.name}</strong>
-              <a href={`mailto:${contact.email}`} style={{ textDecoration: 'underline', color: 'var(--brand)' }}>{contact.email}</a>
+              <a href={`mailto:${contact.email}`} style={{ textDecoration: 'underline', color: 'var(--brand-text)' }}>{contact.email}</a>
             </p>
           )}
 
