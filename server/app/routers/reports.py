@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.database import supabase_admin
 from app.dependencies import get_current_user
 from app.matching import HIGH_THRESHOLD, rank_matches
+from app.ratelimit import limit
 from app.schemas import ReportCreate, ReportStatusUpdate
 from app.services import get_report_or_404, is_admin, notify
-from app.visibility import UNLOCK_THRESHOLD, Viewer, candidates_for, generic_title
+from app.visibility import UNLOCK_THRESHOLD, Viewer, candidates_for, generic_title, redact
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -55,7 +56,7 @@ def _notify_new_matches(report: dict) -> None:
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_report(payload: ReportCreate, current_user=Depends(get_current_user)):
+async def create_report(payload: ReportCreate, current_user=Depends(limit("report_create", 20, 3600))):
     data = payload.model_dump(mode="json")
     data["reporter_id"] = current_user.id
 
@@ -94,20 +95,17 @@ async def list_reports(
     page_size: int = 20,
 ):
     """
-    Returns the public feed, with search/filtering. private_detail is
-    always stripped unless the requester is the report's own reporter.
+    Returns the feed, with search/filtering. Every report shows only a generic title
+    unless the requester owns it (or, for found items, owns a matching lost report).
     """
     viewer = Viewer(current_user.id, is_admin(current_user.id))
 
-    def build(rtype_override=None, exclude_found=False, only_ids=None):
+    def build(only_ids=None):
         q = supabase_admin.table("item_reports").select("*", count="exact")
-        rt = rtype_override or report_type
         if category:
             q = q.eq("category", category)
-        if rt:
-            q = q.eq("report_type", rt)
-        if exclude_found:
-            q = q.neq("report_type", "found")
+        if report_type:
+            q = q.eq("report_type", report_type)
         if only_ids is not None:
             q = q.in_("id", list(only_ids))
         if status_:
@@ -130,16 +128,12 @@ async def list_reports(
     start = (page - 1) * page_size
     end = start + page_size - 1
 
-    if hidden_filters and not viewer.admin and report_type != "lost":
-        # Filtering on colour/brand/location/date/text must never reveal hidden found items
-        # (otherwise "?colour=blue" would work as an oracle). So: lost reports normally,
-        # found reports only among the ones this user is already allowed to see.
-        rows = []
-        if report_type != "found":
-            rows += build(exclude_found=True).execute().data or []
-        visible = viewer.visible_found_ids()
-        if visible and report_type in (None, "", "found"):
-            rows += build(rtype_override="found", only_ids=visible).execute().data or []
+    if hidden_filters and not viewer.admin:
+        # Filtering on colour/brand/location/date/text must never reveal hidden reports
+        # (otherwise "?colour=blue" would work as an oracle). So filters only search the
+        # reports this user may already see in full.
+        visible = viewer.visible_ids()
+        rows = (build(only_ids=visible).execute().data or []) if visible else []
         rows.sort(key=lambda r: r["created_at"], reverse=True)
         total = len(rows)
         rows = rows[start:end + 1]
@@ -177,19 +171,26 @@ async def get_report(ref: str, current_user=Depends(get_current_user)):
 @router.get("/{ref}/matches")
 async def get_matches(ref: str, current_user=Depends(get_current_user)):
     """
-    Ranked possible matches for a report. Only the report's owner (or an admin)
-    can ask — matches are a tool for the person doing the searching.
-    Candidates are returned WITHOUT private_detail.
+    Possible matches for a report. Only the report's owner (or an admin) can ask.
+    For a LOST report: matching found items (score >= 50) without private_detail.
+    For a FOUND report: only a count of strongly interested owners, never their reports.
     """
     report = get_report_or_404(ref)
     if report["reporter_id"] != current_user.id and not is_admin(current_user.id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the report owner can view its matches.")
 
     ranked = rank_matches(report, candidates_for(report))
-    if report["report_type"] == "lost":
-        # found items below the unlock threshold stay hidden even from this list
-        ranked = [m for m in ranked if m["score"] >= UNLOCK_THRESHOLD]
-    ranked = ranked[:10]
+    if report["report_type"] == "found":
+        # A finder never sees lost reports or per-field scores (that would let them reverse-engineer
+        # the owner's details). They only learn how many people closely match.
+        return {
+            "report_code": report["report_code"],
+            "matches": [],
+            "interested": sum(1 for m in ranked if m["score"] >= HIGH_THRESHOLD),
+        }
+
+    # lost owner: found items below the unlock threshold stay hidden even from this list
+    ranked = [m for m in ranked if m["score"] >= UNLOCK_THRESHOLD][:10]
     return {
         "report_code": report["report_code"],
         "matches": [

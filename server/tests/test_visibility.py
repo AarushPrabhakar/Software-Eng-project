@@ -90,3 +90,66 @@ def test_lost_owner_match_list_hides_weak_found_items(api):
               event_date="2026-01-01", public_description="red plastic thing", title="x")
     lost = mk_report(api, "u-owner", "lost")
     assert api("u-owner", "GET", f"/api/reports/{lost['report_code']}/matches").json()["matches"] == []
+
+
+# ---- lost reports are private too -------------------------------------------------------
+
+def lost(api, user="u-owner", **over):
+    return mk_report(api, user, "lost", private_detail="scratch shaped like an X", **over)
+
+
+def test_other_peoples_lost_reports_are_hidden(api):
+    rep = lost(api, title="Blue Milton bottle with an X scratch")
+    row = feed(api, "u-other")["reports"][0]
+    assert row["redacted"] is True and row["access"] == "hidden"
+    assert row["title"] == "Water bottle or tumbler lost"              # stored title not exposed
+    for k in DETAIL_FIELDS:
+        assert k not in row
+    one = api("u-other", "GET", f"/api/reports/{rep['report_code']}").json()["report"]
+    assert one["redacted"] is True and "public_description" not in one and "private_detail" not in one
+
+
+def test_lost_owner_and_admin_still_see_their_report(api):
+    rep = lost(api)
+    mine = api("u-owner", "GET", f"/api/reports/{rep['report_code']}").json()["report"]
+    assert mine["access"] == "owner" and mine["colour"] == "Blue" and mine["private_detail"]
+    adm = api("u-admin", "GET", f"/api/reports/{rep['report_code']}").json()["report"]
+    assert adm["access"] == "admin" and adm["colour"] == "Blue" and "private_detail" not in adm
+
+
+def test_cannot_copy_a_lost_report_to_unlock_a_found_item(api):
+    """The attack: read someone's lost report, file a look-alike, unlock the found item."""
+    victim = lost(api, "u-owner")
+    found(api)
+    seen = api("u-other", "GET", f"/api/reports/{victim['report_code']}").json()["report"]
+    assert "colour" not in seen and "campus_location" not in seen and "brand" not in seen
+    # the attacker has nothing to copy, so a blind report in a different place/colour/date stays locked
+    mk_report(api, "u-other", "lost", brand="Cello", colour="Red", campus_location="Hostel A",
+              event_date="2026-01-01", public_description="red plastic thing", title="red thing")
+    rows = [r for r in feed(api, "u-other")["reports"] if r["report_type"] == "found"]
+    assert rows and all(r["redacted"] for r in rows)
+
+
+def test_filters_cannot_find_other_peoples_lost_reports(api):
+    lost(api)
+    for q in ("?colour=blue", "?brand=milton", "?campus_location=library", "?search=milton", "?report_type=lost&colour=blue"):
+        rows = feed(api, "u-other", q)["reports"]
+        assert rows == [], q
+    # the owner can still filter their own report
+    assert len(feed(api, "u-owner", "?colour=blue")["reports"]) == 1
+
+
+def test_finder_never_sees_the_lost_report_behind_a_match(api):
+    f = found(api)
+    lost(api)
+    res = api("u-finder", "GET", f"/api/reports/{f['report_code']}/matches").json()
+    assert res["matches"] == [] and res["interested"] == 1
+    assert "Blue" not in str(res) and "Library" not in str(res)
+
+
+def test_report_creation_is_rate_limited(api):
+    for _ in range(20):
+        mk_report(api, "u-other", "lost")
+    r = api("u-other", "POST", "/api/reports", json=dict(report_type="lost", category="water_bottles", title="x",
+            public_description="x", colour="Blue", brand="Milton", campus_location="Central Library", event_date="2026-09-10"))
+    assert r.status_code == 429

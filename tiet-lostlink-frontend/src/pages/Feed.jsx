@@ -64,7 +64,7 @@ export default function Feed() {
         <div>
           <h1>Campus feed</h1>
           <p>
-            Lost items are public. Found items show only their type until one of your lost reports matches.
+            Every report shows only its type. Details open up only for the owner, and for found items only to someone whose own lost report matches.
           </p>
         </div>
         <div className="page-head__actions">

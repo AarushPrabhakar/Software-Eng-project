@@ -1,13 +1,15 @@
 """
-Who may see what on a FOUND report.
+Who may see what on a report.
 
-Everyone logged in sees only a generic title + category. The details (description,
-colour, brand, location, date, photo) are shown only to:
-  * the finder (owner), and admins
-  * someone whose own ACTIVE lost report matches the item with score >= UNLOCK_THRESHOLD
-  * someone who already has a claim on it
-The finder's private_detail is NEVER shown to anyone but the finder (and the finder-side
-claim screen).  Lost reports stay public, because the owner wants them to be seen.
+LOST and FOUND reports are both private by default. Everyone logged in sees only a generic
+title + category ("Water bottle or tumbler lost / found"). The details (description, colour,
+brand, location, date, photo) are shown only to:
+  * the report's own owner, and admins
+  * for FOUND items: someone whose own ACTIVE lost report matches the item with
+    score >= UNLOCK_THRESHOLD, or who already has a claim on it
+A lost report is never shown to anyone else, so nobody can read it and copy its details into
+a look-alike report to unlock a found item. The finder's private_detail is NEVER shown to
+anyone but the finder (and the finder-side claim screen).
 """
 from typing import Optional
 
@@ -30,7 +32,8 @@ KEEP_WHEN_HIDDEN = ("id", "report_code", "reporter_id", "report_type", "category
 
 
 def generic_title(report: dict) -> str:
-    return f"{CATEGORY_LABELS.get(report.get('category'), 'Item')} found"
+    kind = "lost" if report.get("report_type") == "lost" else "found"
+    return f"{CATEGORY_LABELS.get(report.get('category'), 'Item')} {kind}"
 
 
 def redact(report: dict) -> dict:
@@ -78,11 +81,8 @@ def claimed_report_ids(user_id: str) -> set:
     return {r["report_id"] for r in rows}
 
 
-def own_found_ids(user_id: str) -> set:
-    rows = (
-        supabase_admin.table("item_reports").select("id")
-        .eq("reporter_id", user_id).eq("report_type", "found").execute()
-    ).data or []
+def own_report_ids(user_id: str) -> set:
+    rows = supabase_admin.table("item_reports").select("id").eq("reporter_id", user_id).execute().data or []
     return {r["id"] for r in rows}
 
 
@@ -95,17 +95,18 @@ class Viewer:
         self.unlocked = {} if admin else unlocked_found(user_id)
         self.claimed = set() if admin else claimed_report_ids(user_id)
 
-    def visible_found_ids(self) -> set:
-        return set(self.unlocked) | self.claimed | own_found_ids(self.user_id)
+    def visible_ids(self) -> set:
+        """Ids of every report this user may see in full (own reports, unlocked or claimed found items)."""
+        return set(self.unlocked) | self.claimed | own_report_ids(self.user_id)
 
     def view(self, report: dict) -> dict:
         if report.get("reporter_id") == self.user_id:
             return {**report, "redacted": False, "access": "owner"}
         public = {k: v for k, v in report.items() if k != "private_detail"}
-        if report.get("report_type") == "lost":
-            return {**public, "redacted": False, "access": "public"}
         if self.admin:
             return {**public, "redacted": False, "access": "admin"}
+        if report.get("report_type") == "lost":
+            return redact(report)  # someone else's lost report: never visible
         if report["id"] in self.unlocked:
             return {**public, "redacted": False, "access": "matched", "match_score": self.unlocked[report["id"]]}
         if report["id"] in self.claimed:

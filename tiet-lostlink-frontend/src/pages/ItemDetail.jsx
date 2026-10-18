@@ -120,6 +120,7 @@ export default function ItemDetail() {
   const navigate = useNavigate()
   const [raw, setRaw] = useState(null)
   const [matches, setMatches] = useState([])
+  const [interested, setInterested] = useState(0) // found owner: how many owners closely match
   const [claims, setClaims] = useState([]) // claims related to this report (mine or received)
   const [showClaim, setShowClaim] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -141,7 +142,10 @@ export default function ItemDetail() {
 
         if (owner) {
           const m = await api.get(`/reports/${id}/matches`)
-          if (!cancelled) setMatches(m.data.matches)
+          if (!cancelled) {
+            setMatches(m.data.matches)
+            setInterested(m.data.interested || 0)
+          }
         }
         if (report.report_type === 'found') {
           const list = await api.get(owner ? '/claims/received' : '/claims/mine')
@@ -212,17 +216,36 @@ export default function ItemDetail() {
 
           {raw.redacted ? (
             <div className="panel panel--lock" style={{ marginTop: 0 }}>
-              <h3 style={{ display: 'flex', gap: 8, alignItems: 'center' }}><EyeOff size={20} />Details are hidden to protect the owner</h3>
+              <h3 style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <EyeOff size={20} />
+                {item.type === 'lost' ? 'Lost reports are private' : 'Details are hidden to protect the owner'}
+              </h3>
               <div className="redact redact--tall" style={{ margin: '14px 0' }} aria-hidden="true"><i /><i /><i /></div>
-              <p>
-                The finder's description, photo and location open up only for people whose own lost report
-                matches this item.
-              </p>
-              <p className="muted">
-                Lost something like this? File a lost report with as much detail as you can. If it matches,
-                you'll get an alert and the details open up here.
-              </p>
-              <Link to="/report/lost" className="btn btn--lost btn--sm" style={{ marginTop: 14 }}>I lost something</Link>
+              {item.type === 'lost' ? (
+                <>
+                  <p>
+                    The owner's description, photo and location are visible only to them. This stops anyone
+                    from copying a lost report to claim the item.
+                  </p>
+                  <p className="muted">
+                    Found something like this? File a found report with as much detail as you can. If it
+                    matches, the owner gets an alert. You never need to read their report.
+                  </p>
+                  <Link to="/report/found" className="btn btn--found btn--sm" style={{ marginTop: 14 }}>I found something</Link>
+                </>
+              ) : (
+                <>
+                  <p>
+                    The finder's description, photo and location open up only for people whose own lost report
+                    matches this item.
+                  </p>
+                  <p className="muted">
+                    Lost something like this? File a lost report with as much detail as you can. If it matches,
+                    you'll get an alert and the details open up here.
+                  </p>
+                  <Link to="/report/lost" className="btn btn--lost btn--sm" style={{ marginTop: 14 }}>I lost something</Link>
+                </>
+              )}
             </div>
           ) : (
             <>
@@ -272,9 +295,6 @@ export default function ItemDetail() {
               </button>
             )
           )}
-          {!isOwner && item.status === 'active' && item.type === 'lost' && (
-            <Link to="/report/found" className="btn btn--found btn--lg">I found this item</Link>
-          )}
           {!isOwner && item.status !== 'active' && (
             <p className="msg msg--info">This item is no longer open for claims.</p>
           )}
@@ -304,11 +324,18 @@ export default function ItemDetail() {
         <>
           <h2 className="section-title">Possible matches</h2>
           <p className="section-sub">
-            Scored by the server on category, brand, colour, location, date and description. A match is a
-            suggestion, not proof of ownership.
+            {item.type === 'found'
+              ? "For privacy, you can't see other people's lost reports. Owners find you through a claim."
+              : 'Scored by the server on category, brand, colour, location, date and description. A match is a suggestion, not proof of ownership.'}
           </p>
 
-          {matches.length === 0 ? (
+          {item.type === 'found' ? (
+            <EmptyState icon={Sparkles} title={interested > 0 ? `${interested} ${interested === 1 ? 'person has' : 'people have'} a lost report that closely matches` : 'No close matches yet'}>
+              {interested > 0
+                ? "They've been alerted. You'll get a notification when one of them submits a claim, and you decide whether to approve it."
+                : "We'll send you an alert if someone's lost report matches this item."}
+            </EmptyState>
+          ) : matches.length === 0 ? (
             <EmptyState icon={Sparkles} title="No matches yet">
               We'll send you an alert as soon as a strong match is reported.
             </EmptyState>

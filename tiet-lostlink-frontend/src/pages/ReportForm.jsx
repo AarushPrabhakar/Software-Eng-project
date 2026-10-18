@@ -115,7 +115,7 @@ export default function ReportForm({ type }) {
           <h1>{isLost ? 'Report a lost item' : 'Report a found item'}</h1>
           <p>
             {isLost
-              ? 'The more detail you give, the better we can match it. If something fits, you get an alert.'
+              ? 'Only you can read this report. The more detail you give, the better we can match it. If something fits, you get an alert.'
               : 'Only the item type is public. Your details open up just for people whose own lost report matches.'}
           </p>
         </div>
